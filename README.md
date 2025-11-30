@@ -1,224 +1,1 @@
-# TVPVARConnectedness
-
-A lightweight Python implementation of time varying parameter VAR (TVP-VAR) with discount factors and Diebold–Yilmaz style connectedness measures, following Antonakakis et al. (2020).
-
-The core class `TVPVARConnectedness` estimates a TVP-VAR with forgetting factors, computes generalized forecast error variance decompositions (GFEVDs), and provides a rich set of tools to study time varying connectedness:
-
-- Total Connectedness Index (TCI)
-- Directional connectedness **TO** and **FROM** others and net directional connectedness
-- Net pairwise directional connectedness
-- Static Diebold–Yilmaz table averaged over time
-- Time series plots, pairwise plots, and network graphs (gross and net) of the connectedness measures
-
-All of this lives in a single file, `TVPVARConnectedness.py`, with no heavy dependencies beyond NumPy, pandas and matplotlib. Network graphs are optional and only require `networkx`.
-
----
-
-## Features
-
-- TVP-VAR(p) estimated via discounted Kalman filter with:
-  - Discount factor `kappa1` for state covariance
-  - Discount factor `kappa2` for innovation covariance
-- OLS VAR prior estimated on an initial window (`prior_length`)
-- Time varying GFEVDs at a user set forecast horizon `H`
-- Standard Diebold–Yilmaz connectedness measures:
-  - Total Connectedness Index (TCI)
-  - Directional TO, FROM and NET connectedness
-  - Net pairwise directional connectedness
-- Convenience methods that return pandas objects:
-  - `get_tci()`
-  - `get_directional()`
-  - `get_static_table()` and `get_static_table_df()`
-  - `get_pairwise_directional()`
-  - `get_net_pairwise()`
-- Plotting helpers:
-  - `plot_tci()`
-  - `plot_directional_subplots()` for TO, FROM, or net FROM others
-  - `plot_pairwise_directional_subplots()` for pairwise directional connectedness
-  - `plot_net_pairwise_subplots()` for net pairwise connectedness
-  - `plot_network()` and `plot_network_panel()` for gross and net network graphs at selected dates
-
----
-
-## Installation
-
-For now this is a single-file module. You can use it in two simple ways.
-
-### Option 1: Drop-in file
-
-1. Download `TVPVARConnectedness.py` into your project.
-2. Import the class:
-
-```python
-from TVPVARConnectedness import TVPVARConnectedness
-```
-
-Make sure the file is on your Python path (for example in the same folder as your script or added to `PYTHONPATH`).
-
-### Option 2: Install from GitHub
-
-Once the repository is public you can install directly via `pip`:
-
-```bash
-pip install git+https://github.com/<your-username>/<your-repo-name>.git
-```
-
-Then import as usual:
-
-```python
-from TVPVARConnectedness import TVPVARConnectedness
-```
-
----
-
-## Requirements
-
-- Python 3.8 or later
-- NumPy
-- pandas
-- matplotlib
-
-For network graphs:
-
-- networkx (optional but recommended)
-
-If `networkx` is not installed, calling `plot_network` or `plot_network_panel` will raise a clear error message asking you to install it.
-
-Install the core dependencies with:
-
-```bash
-pip install numpy pandas matplotlib
-```
-
-and optionally:
-
-```bash
-pip install networkx
-```
-
----
-
-## Quick start
-
-Here is a minimal example using a pandas DataFrame of excess returns.
-
-```python
-import numpy as np
-import pandas as pd
-from TVPVARConnectedness import TVPVARConnectedness
-
-# Suppose df is a DataFrame of T daily observations with columns:
-# ["AI", "MCCC", "GMB", "Oil", "Carbon", "Mkt"]
-# and a DateTimeIndex.
-y = df[["AI", "MCCC", "GMB", "Oil", "Carbon", "Mkt"]].values
-dates = df.index.to_numpy()
-
-# 1. Estimate TVP-VAR(1) with 10-step horizon and 1-year prior window
-model = TVPVARConnectedness(
-    y=y,
-    lags=1,
-    horizon=10,
-    kappa1=0.99,
-    kappa2=0.96,
-    prior_length=252,
-    dates=dates,
-).fit()
-
-# 2. Total Connectedness Index
-tci = model.get_tci()              # pandas Series
-fig, ax = model.plot_tci()
-
-# 3. Directional connectedness
-to_df, from_df, net_df = model.get_directional()
-fig, axes = model.plot_directional_subplots(
-    which="to",
-    labels=["AI", "MCCC", "GMB", "Oil", "Carbon", "Mkt"],
-)
-
-# 4. Static Diebold–Yilmaz table
-static_table = model.get_static_table_df(
-    labels=["AI", "MCCC", "GMB", "Oil", "Carbon", "Mkt"]
-)
-print(static_table.round(2))
-
-# 5. Network graphs at selected dates (requires networkx)
-#    Example: last date, and two dates around interesting events
-fig, axes = model.plot_network_panel(
-    times=["2021-03-01", "2022-03-01", "2023-03-01", -1],
-    labels=["AI", "MCCC", "GMB", "Oil", "Carbon", "Mkt"],
-    use_net=False,           # gross network; set True for net pairwise
-    threshold=1.0,
-)
-```
-
----
-
-## API overview
-
-Only the main methods are listed here. See the docstrings in `TVPVARConnectedness.py` for full details.
-
-### Estimation
-
-```python
-TVPVARConnectedness(y, lags=1, horizon=10,
-                    kappa1=0.99, kappa2=0.96,
-                    prior_length=None, dates=None)
-
-model.fit()
-```
-
-- `y` – array of shape `(T, m)` with T observations of m variables.
-- `lags` – VAR order `p`.
-- `horizon` – forecast horizon `H` for GFEVD.
-- `kappa1` – discount factor for the state covariance (0 < kappa1 ≤ 1).
-- `kappa2` – discount factor for the innovation covariance (0 < kappa2 ≤ 1).
-- `prior_length` – length of initial sample used for OLS VAR prior. If `None`, a reasonable default is chosen.
-- `dates` – optional time index of length `T` (for pandas outputs and axis labels).
-
-### Connectedness measures
-
-- `get_tci()`  
-  Returns a pandas Series with the Total Connectedness Index over time.
-
-- `get_directional()`  
-  Returns three DataFrames `(to_df, from_df, net_df)` with directional TO, FROM, and NET connectedness for each variable.
-
-- `get_static_table()`  
-  Returns a dictionary with average GFEVD and connectedness statistics.
-
-- `get_static_table_df(labels=None)`  
-  Returns a Diebold–Yilmaz style static table as a pandas DataFrame with rows and columns corresponding to variables plus TO/FROM/NET and the average TCI.
-
-- `get_pairwise_directional(from_idx, to_idx, labels=None)`  
-  Time series of directional connectedness FROM variable `from_idx` TO variable `to_idx`.
-
-- `get_net_pairwise(i, j, labels=None)`  
-  Time series of net pairwise directional connectedness between variables `i` and `j` (`> 0` means `j` is net transmitter to `i`).
-
-### Plotting helpers
-
-- `plot_tci(ax=None)`
-- `plot_directional_subplots(which="to", labels=None, figsize=(14, 8))`
-- `plot_pairwise_directional_subplots(which="both", labels=None, figsize=(16, 10))`
-- `plot_net_pairwise_subplots(labels=None, figsize=(16, 10))`
-- `plot_network(t_idx=-1, labels=None, threshold=1.0, use_net=False, figsize=(8, 8), ax=None)`
-- `plot_network_panel(times, labels=None, threshold=1.0, use_net=False, figsize_per_plot=(5.0, 5.0))`
-
-These functions all return the figure and axes, so you can further customise or save them.
-
----
-
-## References
-
-If you use this code in academic work, please consider citing the underlying connectedness literature, for example:
-
-- Diebold, F. X., & Yilmaz, K. (2014). On the network topology of variance decompositions: Measuring the connectedness of financial firms. *Journal of Econometrics*, 182(1), 119–134.
-- Antonakakis, N., Chatziantoniou, I., Gabauer, D., & others (2020). Refined measures of dynamic connectedness based on TVP-VAR. *Working paper / journal version depending on your source*.
-
-You may also acknowledge the GitHub repository implementing this TVP-VAR connectedness class.
-
----
-
-## License
-
-This project is licensed under the MIT License. See the `LICENSE` file for details.
+# TVPVARConnectednessA lightweight Python implementation of time varying parameter VAR (TVP-VAR) with discount factors and Diebold–Yilmaz style connectedness measures, following Antonakakis et al. (2020).The core class `TVPVARConnectedness` estimates a TVP-VAR with forgetting factors, computes generalized forecast error variance decompositions (GFEVDs), and provides a rich set of tools to study time varying connectedness:- Total Connectedness Index (TCI)- Directional connectedness **TO** and **FROM** others and net directional connectedness- Net pairwise directional connectedness- Static Diebold–Yilmaz table averaged over time- Time series plots, pairwise plots, and network graphs (gross and net) of the connectedness measuresAll of this lives in a single file, `TVPVARConnectedness.py`, with no heavy dependencies beyond NumPy, pandas and matplotlib. Network graphs are optional and only require `networkx`.---## Features- TVP-VAR(p) estimated via discounted Kalman filter with:  - Discount factor `kappa1` for state covariance  - Discount factor `kappa2` for innovation covariance- OLS VAR prior estimated on an initial window (`prior_length`)- Time varying GFEVDs at a user set forecast horizon `H`- Standard Diebold–Yilmaz connectedness measures:  - Total Connectedness Index (TCI)  - Directional TO, FROM and NET connectedness  - Net pairwise directional connectedness- Convenience methods that return pandas objects:  - `get_tci()`  - `get_directional()`  - `get_static_table()` and `get_static_table_df()`  - `get_pairwise_directional()`  - `get_net_pairwise()`- Plotting helpers:  - `plot_tci()`  - `plot_directional_subplots()` for TO, FROM, or net FROM others  - `plot_pairwise_directional_subplots()` for pairwise directional connectedness  - `plot_net_pairwise_subplots()` for net pairwise connectedness  - `plot_network()` and `plot_network_panel()` for gross and net network graphs at selected dates---## InstallationFor now this is a single-file module. You can use it in two simple ways.### Option 1: Drop-in file1. Download `TVPVARConnectedness.py` into your project.2. Import the class:```pythonfrom TVPVARConnectedness import TVPVARConnectedness```Make sure the file is on your Python path (for example in the same folder as your script or added to `PYTHONPATH`).### Option 2: Install from GitHubOnce the repository is public you can install directly via `pip`:```bashpip install git+https://github.com/<your-username>/<your-repo-name>.git```Then import as usual:```pythonfrom TVPVARConnectedness import TVPVARConnectedness```---## Requirements- Python 3.8 or later- NumPy- pandas- matplotlibFor network graphs:- networkx (optional but recommended)If `networkx` is not installed, calling `plot_network` or `plot_network_panel` will raise a clear error message asking you to install it.Install the core dependencies with:```bashpip install numpy pandas matplotlib```and optionally:```bashpip install networkx```---## Quick startHere is a minimal example using a pandas DataFrame of excess returns.```pythonimport numpy as npimport pandas as pdfrom TVPVARConnectedness import TVPVARConnectedness# Suppose df is a DataFrame of T daily observations with columns:# ["Y1", "Y2", "Y3", "Y4", Y5", "Y6"]# and a DateTimeIndex.y = df[["Y1", "Y2", "Y3", "Y4", Y5", "Y6"]].valuesdates = df.index.to_numpy()# 1. Estimate TVP-VAR(1) with 10-step horizon and 1-year prior windowmodel = TVPVARConnectedness(    y=y,    lags=1,    horizon=10,    kappa1=0.99,    kappa2=0.96,    prior_length=252,    dates=dates,).fit()# 2. Total Connectedness Indextci = model.get_tci()              # pandas Seriesfig, ax = model.plot_tci()# 3. Directional connectednessto_df, from_df, net_df = model.get_directional()fig, axes = model.plot_directional_subplots(    which="to",    labels=["Y1", "Y2", "Y3", "Y4", Y5", "Y6"],)# 4. Static Diebold–Yilmaz tablestatic_table = model.get_static_table_df(    labels=["Y1", "Y2", "Y3", "Y4", Y5", "Y6"])print(static_table.round(2))# 5. Network graphs at selected dates (requires networkx)#    Example: last date, and two dates around interesting eventsfig, axes = model.plot_network_panel(    times=["2021-03-01", "2022-03-01", "2023-03-01", -1],    labels=[""Y1", "Y2", "Y3", "Y4", Y5", "Y6"],    use_net=False,           # gross network; set True for net pairwise    threshold=1.0,)```---## API overviewOnly the main methods are listed here. See the docstrings in `TVPVARConnectedness.py` for full details.### Estimation```pythonTVPVARConnectedness(y, lags=1, horizon=10,                    kappa1=0.99, kappa2=0.96,                    prior_length=None, dates=None)model.fit()```- `y` – array of shape `(T, m)` with T observations of m variables.- `lags` – VAR order `p`.- `horizon` – forecast horizon `H` for GFEVD.- `kappa1` – discount factor for the state covariance (0 < kappa1 ≤ 1).- `kappa2` – discount factor for the innovation covariance (0 < kappa2 ≤ 1).- `prior_length` – length of initial sample used for OLS VAR prior. If `None`, a reasonable default is chosen.- `dates` – optional time index of length `T` (for pandas outputs and axis labels).### Connectedness measures- `get_tci()`    Returns a pandas Series with the Total Connectedness Index over time.- `get_directional()`    Returns three DataFrames `(to_df, from_df, net_df)` with directional TO, FROM, and NET connectedness for each variable.- `get_static_table()`    Returns a dictionary with average GFEVD and connectedness statistics.- `get_static_table_df(labels=None)`    Returns a Diebold–Yilmaz style static table as a pandas DataFrame with rows and columns corresponding to variables plus TO/FROM/NET and the average TCI.- `get_pairwise_directional(from_idx, to_idx, labels=None)`    Time series of directional connectedness FROM variable `from_idx` TO variable `to_idx`.- `get_net_pairwise(i, j, labels=None)`    Time series of net pairwise directional connectedness between variables `i` and `j` (`> 0` means `j` is net transmitter to `i`).### Plotting helpers- `plot_tci(ax=None)`- `plot_directional_subplots(which="to", labels=None, figsize=(14, 8))`- `plot_pairwise_directional_subplots(which="both", labels=None, figsize=(16, 10))`- `plot_net_pairwise_subplots(labels=None, figsize=(16, 10))`- `plot_network(t_idx=-1, labels=None, threshold=1.0, use_net=False, figsize=(8, 8), ax=None)`- `plot_network_panel(times, labels=None, threshold=1.0, use_net=False, figsize_per_plot=(5.0, 5.0))`These functions all return the figure and axes, so you can further customise or save them.---## ReferencesIf you use this code in academic work, please consider citing the underlying connectedness literature, for example:- Diebold, F. X., & Yilmaz, K. (2014). On the network topology of variance decompositions: Measuring the connectedness of financial firms. *Journal of Econometrics*, 182(1), 119–134.- Antonakakis, N., Chatziantoniou, I., & Gabauer, D. (2020). Refined measures of dynamic connectedness based on TVP-VAR. *Journal of Risk and Financial Management*, 18(34).You may also acknowledge the GitHub repository implementing this TVP-VAR connectedness class.---## LicenseThis project is licensed under the MIT License. See the `LICENSE` file for details.
