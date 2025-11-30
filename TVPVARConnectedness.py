@@ -484,8 +484,9 @@ class TVPVARConnectedness:
         ax.axhline(0.0, linestyle="--", linewidth=0.8)
         ax.plot(x, y)
         ax.fill_between(x, 0, y, alpha=0.3)
-        ax.set_title("Total Connectedness Index (TCI)", fontsize=13)
+        ax.set_title("Total Connectedness Index (TCI)", fontsize=16)
         ax.set_ylabel("Percent")
+        ax.grid(False, axis='x')
         ax.grid(axis='y', linestyle='--', color='gray', alpha=0.7)
         return ax
 
@@ -523,7 +524,7 @@ class TVPVARConnectedness:
 
         n = self.m
         rows, cols = self._get_plot_dimension(n)
-        fig, axes = plt.subplots(rows, cols, figsize=figsize, sharex=True)
+        fig, axes = plt.subplots(rows, cols, figsize=figsize)
         axes = np.atleast_1d(axes).flatten()
 
         for i, col in enumerate(df_plot.columns):
@@ -534,14 +535,15 @@ class TVPVARConnectedness:
             ax.axhline(0.0, linestyle="--", linewidth=0.8)
             ax.plot(x, y)
             ax.fill_between(x, 0, y, alpha=0.3)
-            ax.set_title(col, fontsize=13)
+            ax.set_title(col, fontsize=14)
+            ax.grid(False, axis='x')
             ax.grid(axis='y', linestyle='--', color='gray', alpha=0.7)
 
         # hide unused axes if grid is larger than m
         for ax in axes[n:]:
             ax.axis("off")
 
-        fig.suptitle(title_root)
+        fig.suptitle(title_root, fontsize=16)
         fig.tight_layout()
         return fig, axes
 
@@ -594,7 +596,7 @@ class TVPVARConnectedness:
         n_plots = len(pairs)
         rows, cols = self._get_plot_dimension(n_plots)
 
-        fig, axes = plt.subplots(rows, cols, figsize=figsize, sharex=True)
+        fig, axes = plt.subplots(rows, cols, figsize=figsize)
         axes = np.atleast_1d(axes).flatten()
 
         for ax, (i, j) in zip(axes, pairs):
@@ -608,13 +610,13 @@ class TVPVARConnectedness:
                 s = 100.0 * self.phi_t[:, i, j]
                 ax.plot(idx, s)
                 ax.fill_between(idx, 0, s, alpha=0.35)
-                ax.set_title(f"{name_j} → {name_i}", fontsize=13)
+                ax.set_title(f"{name_j} → {name_i}", fontsize=14)
             elif which == "i_to_j":
                 # FROM i TO j: phi[j, i]
                 s = 100.0 * self.phi_t[:, j, i]
                 ax.plot(idx, s)
                 ax.fill_between(idx, 0, s, alpha=0.35)
-                ax.set_title(f"{name_i} → {name_j}", fontsize=13)
+                ax.set_title(f"{name_i} → {name_j}", fontsize=14)
             else:  # which == "both"
                 # j → i (blue shaded)
                 s_j_to_i = 100.0 * self.phi_t[:, i, j]
@@ -625,9 +627,10 @@ class TVPVARConnectedness:
                 s_i_to_j = 100.0 * self.phi_t[:, j, i]
                 ax.plot(idx, s_i_to_j, color="#FFC400", label=f"{name_i} → {name_j}", alpha=0.75)
 
-                ax.set_title(f"{name_i} & {name_j}", fontsize=13)
+                ax.set_title(f"{name_i} & {name_j}", fontsize=14)
                 ax.legend(loc="upper right", fontsize=7, framealpha=0.8)
 
+            ax.grid(False, axis='x')
             ax.grid(axis='y', linestyle='--', color='gray', alpha=0.7)
 
         # hide unused axes
@@ -641,7 +644,7 @@ class TVPVARConnectedness:
         else:
             suptitle = "Pairwise Directional Connectedness (both directions)"
 
-        fig.suptitle(suptitle)
+        fig.suptitle(suptitle, fontsize=16)
         fig.tight_layout()
         return fig, axes
 
@@ -673,7 +676,7 @@ class TVPVARConnectedness:
         n_plots = len(pairs)
         rows, cols = self._get_plot_dimension(n_plots)
 
-        fig, axes = plt.subplots(rows, cols, figsize=figsize, sharex=True)
+        fig, axes = plt.subplots(rows, cols, figsize=figsize)
         axes = np.atleast_1d(axes).flatten()
 
         for ax, (i, j) in zip(axes, pairs):
@@ -686,13 +689,14 @@ class TVPVARConnectedness:
             ax.plot(idx, s_ij)
             ax.fill_between(idx, 0, s_ij, alpha=0.3)
 
-            ax.set_title(f"net {name_i} → {name_j}", fontsize=13)
+            ax.set_title(f"net {name_i} → {name_j}", fontsize=14)
+            ax.grid(False, axis='x')
             ax.grid(axis='y', linestyle='--', color='gray', alpha=0.7)
 
         for ax in axes[n_plots:]:
             ax.axis("off")
 
-        fig.suptitle("Net Pairwise Directional Connectedness (percent)")
+        fig.suptitle("Net Pairwise Directional Connectedness", fontsize=16)
         fig.tight_layout()
         return fig, axes
 
